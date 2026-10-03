@@ -14,14 +14,17 @@
     birth: { date: '', time: '', city: '', unknownTime: false },
     topic: '', request: '', answers: {}, messages: []
   };
+  const demoBirth = { date: '1990-10-12', time: '09:40', city: 'Самара, Россия', unknownTime: false };
+  const demoQuestion = 'Мне сложно проявляться открыто, хотя я чувствую, что готова к большему.';
   let state = loadState();
+  if (state.mode === 'returning') applyReturningDemo();
   const previewParams = new URLSearchParams(location.search);
   const previewRoute = previewParams.get('screen');
   const previewMode = previewParams.get('mode');
   if (['home', 'birth', 'chart', 'guide', 'request', 'report', 'reports', 'profile'].includes(previewRoute)) state.route = previewRoute;
   if (['new', 'returning'].includes(previewMode)) {
     state.mode = previewMode;
-    if (previewMode === 'returning') { state.birthReady = true; state.reportReady = true; }
+    if (previewMode === 'returning') applyReturningDemo();
   }
   const app = document.querySelector('#app');
   const brandTemplate = document.querySelector('#brand-template');
@@ -31,6 +34,12 @@
     catch { return { ...defaultState }; }
   }
   function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function applyReturningDemo() {
+    state.birthReady = true;
+    state.reportReady = true;
+    if (!state.birth.date) state.birth = { ...demoBirth };
+    if (!state.messages.length) state.messages = [demoQuestion];
+  }
   function esc(value = '') { return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]); }
   function iconBack() { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>'; }
   function iconArrow() { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
@@ -42,6 +51,14 @@
     return `<button class="avatar-button" type="button" data-route="profile" aria-label="Открыть профиль"><img src="${guide.thumb}" alt=""></button>`;
   }
   function brand() { return brandTemplate.innerHTML; }
+  function birthSummary() {
+    if (!state.birthReady || !state.birth.date) return 'Не добавлены';
+    const [year, month, day] = state.birth.date.split('-').map(Number);
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const date = day && month && year ? `${day} ${months[month - 1]} ${year}` : state.birth.date;
+    const time = state.birth.unknownTime || !state.birth.time ? 'время неизвестно' : state.birth.time;
+    return `${date} · ${time} · ${state.birth.city || 'город не указан'}`;
+  }
   function go(route, options = {}) {
     if (route === 'chart' && !state.birthReady) route = 'birth';
     Object.assign(state, options, { route });
@@ -50,19 +67,30 @@
 
   function homeScreen() {
     const guide = guides[state.guide];
-    const returning = state.mode === 'returning';
+    const hasBirth = state.birthReady;
+    const hasMessages = state.messages.length > 0;
+    const hasReports = state.reportReady;
+    const hasProgress = hasBirth || hasMessages || hasReports;
+    const next = !hasBirth
+      ? { title: 'Рассчитать натальную карту', copy: 'Это займёт пару минут. Нужны дата, время и город рождения.', route: 'birth', button: 'Ввести данные' }
+      : hasReports
+        ? { title: 'Твой разбор готов', copy: 'Вернись к выводам и практическим рекомендациям в удобное время.', route: 'report', button: 'Открыть разбор' }
+        : hasMessages
+          ? { title: 'Собрать персональный разбор', copy: 'Преврати важную тему из диалога в подробный материал.', route: 'request', button: 'Сформулировать запрос' }
+          : { title: 'Обсудить карту с проводником', copy: 'Задай вопрос о проявленности, отношениях или своём ресурсе.', route: 'guide', button: 'Открыть диалог' };
+    const reportsSummary = !state.reportReady ? 'Пока здесь пусто' : state.mode === 'returning' ? '3 материала в истории' : '1 готовый материал';
     return `<section class="screen" data-screen="home">
       <div class="home-head">${brand()}${avatar()}</div>
-      <div class="title-block"><span class="eyebrow">Добро пожаловать${returning ? ' снова' : ''}</span><h1>${returning ? 'Твоя карта уже ждёт' : 'Начни с себя'}</h1></div>
+      <div class="title-block"><span class="eyebrow">Добро пожаловать${hasProgress ? ' снова' : ''}</span><h1>${hasBirth ? 'Твоя карта уже ждёт' : 'Начни с себя'}</h1></div>
       <article class="card welcome">
-        <div class="guide-inline"><img src="${guide.thumb}" alt="Проводник ${guide.name}"><div><strong>${guide.name}</strong><p>${returning ? 'Я сохранила главное из нашего диалога. Продолжим оттуда, где остановились?' : 'Я буду рядом, пока ты знакомишься со своей картой и ищешь ответы.'}</p></div></div>
-        <div class="next-step"><span class="eyebrow">Следующий шаг</span><h2>${returning ? 'Продолжить диалог' : 'Рассчитать натальную карту'}</h2><p>${returning ? 'Поговорим о том, что сейчас особенно важно.' : 'Это займёт пару минут. Нужны дата, время и город рождения.'}</p><button class="primary" type="button" data-route="${returning ? 'guide' : 'birth'}">${returning ? 'Открыть диалог' : 'Ввести данные'} ${iconArrow()}</button></div>
+        <div class="guide-inline"><img src="${guide.thumb}" alt="Проводник ${guide.name}"><div><strong>${guide.name}</strong><p>${hasMessages ? 'Я сохранила главное из нашего диалога. Продолжим оттуда, где остановились?' : 'Я буду рядом, пока ты знакомишься со своей картой и ищешь ответы.'}</p></div></div>
+        <div class="next-step"><span class="eyebrow">Следующий шаг</span><h2>${next.title}</h2><p>${next.copy}</p><button class="primary" type="button" data-route="${next.route}">${next.button} ${iconArrow()}</button></div>
       </article>
       <div class="section-gap"><span class="eyebrow">Твоё пространство</span><div class="quick-grid">
-        <button class="quick-card" type="button" data-route="chart"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8"/></svg><strong>Моя натальная карта</strong><span>${returning ? 'Солнце, Луна, Асцендент и детали' : 'Сначала добавь данные рождения'}</span></button>
-        <button class="quick-card" type="button" data-route="guide"><svg viewBox="0 0 24 24"><path d="M5 17c-2-1-3-3-3-6 0-5 4-8 10-8s10 3 10 8-4 8-10 8c-1 0-2 0-3-.2L5 21z"/></svg><strong>Спросить проводника</strong><span>Диалог на важную тему</span></button>
-        <button class="quick-card" type="button" data-route="request"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6M9 7h3"/></svg><strong>Собрать разбор</strong><span>Глубоко под твой запрос</span></button>
-        <button class="quick-card" type="button" data-route="reports"><svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM8 3h8v3M8 11h8M8 15h5"/></svg><strong>Мои разборы</strong><span>${returning ? '3 материала в истории' : 'Пока здесь пусто'}</span></button>
+        <button class="quick-card" type="button" data-route="chart"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8"/></svg><strong>Моя натальная карта</strong><span data-home-map-summary>${hasBirth ? 'Карта сохранена · Солнце, Луна и Асцендент' : 'Сначала добавь данные рождения'}</span></button>
+        <button class="quick-card" type="button" data-route="guide"><svg viewBox="0 0 24 24"><path d="M5 17c-2-1-3-3-3-6 0-5 4-8 10-8s10 3 10 8-4 8-10 8c-1 0-2 0-3-.2L5 21z"/></svg><strong>Спросить проводника</strong><span>${hasMessages ? 'Продолжить сохранённый диалог' : 'Диалог на важную тему'}</span></button>
+        <button class="quick-card" type="button" data-route="request"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6M9 7h3"/></svg><strong>Собрать разбор</strong><span>${hasReports ? 'Готовый разбор уже в истории' : 'Глубоко под твой запрос'}</span></button>
+        <button class="quick-card" type="button" data-route="reports"><svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM8 3h8v3M8 11h8M8 15h5"/></svg><strong>Мои разборы</strong><span data-home-reports-summary>${reportsSummary}</span></button>
       </div></div>
     </section>`;
   }
@@ -108,8 +136,10 @@
 
   function guideScreen() {
     const guide = guides[state.guide];
-    const sample = state.mode === 'returning' || state.messages.length;
-    const messages = sample ? `<div class="message user">Мне сложно проявляться открыто, хотя я чувствую, что готова к большему.</div><div class="message guide">В твоей карте есть сильная потребность быть увиденной — и одновременно высокая чувствительность к оценке. Это не противоречие, а настройка твоего способа проявляться.</div><div class="message guide">Начни не с громкости, а с ясности: выбери одну мысль, за которую готова стоять сегодня. Твой Асцендент во Льве раскрывается, когда ты не играешь роль, а позволяешь себе занимать место.</div>` : `<div class="message guide">Я рядом. О чём тебе хочется поговорить сегодня?</div>`;
+    const guideReply = `<div class="message guide">В твоей карте есть сильная потребность быть увиденной — и одновременно высокая чувствительность к оценке. Это не противоречие, а настройка твоего способа проявляться.</div><div class="message guide">Начни не с громкости, а с ясности: выбери одну мысль, за которую готова стоять сегодня. Твой Асцендент во Льве раскрывается, когда ты не играешь роль, а позволяешь себе занимать место.</div>`;
+    const messages = state.messages.length
+      ? `${state.messages.map(message => `<div class="message user" data-chat-user>${esc(message)}</div>`).join('')}${guideReply}`
+      : `<div class="message guide">Я рядом. О чём тебе хочется поговорить сегодня?</div>`;
     return `<section class="screen chat-screen" data-screen="guide">
       <div class="guide-hero"><img src="${guide.image}" alt="Проводник ${guide.name}"><header class="screen-header"><button class="icon-button" type="button" data-route="home" aria-label="Назад">${iconBack()}</button><div class="header-copy"></div>${avatar()}</header><div class="guide-name"><span class="eyebrow">Твой проводник</span><h1>${guide.name}</h1><p>${guide.subtitle}</p></div></div>
       <div class="chat">${messages}</div>
@@ -162,7 +192,7 @@
   }
 
   function reportsScreen() {
-    const hasReports = state.mode === 'returning' || state.reportReady;
+    const hasReports = state.reportReady;
     return `<section class="screen" data-screen="reports">${header('Мои разборы')}
       <div class="title-block"><h1>История твоих разборов</h1><p>Возвращайся к готовым материалам в удобное время.</p></div>
       ${hasReports ? `<div class="stack"><button class="report-card" type="button" data-route="report"><span class="report-icon">☉</span><span><strong>${esc(reportTitle())}</strong><small>Сегодня · 12 минут</small></span><span class="status">Готов</span></button><button class="report-card" type="button"><span class="report-icon">♃</span><span><strong>Финансовый ресурс и точки роста</strong><small>28 сентября</small></span><span class="status pending">Собирается</span></button><button class="report-card" type="button" data-route="request"><span class="report-icon">☽</span><span><strong>Близость без потери себя</strong><small>12 сентября</small></span><span class="status question">Нужен ответ</span></button></div><button class="secondary section-gap" type="button" data-route="request">Собрать новый разбор</button>` : `<div class="card empty"><div class="empty-mark">✦</div><h2>Здесь появятся твои разборы</h2><p>Первый материал можно собрать под любой живой запрос — без готовых формулировок.</p><button class="primary" type="button" data-route="request">Собрать первый разбор</button></div>`}
@@ -175,7 +205,7 @@
       <div class="title-block"><h1>Твоё пространство</h1><p>Только основные данные — без тарифов и платёжной информации.</p></div>
       <div class="card card-pad profile-guide"><img src="${guide.thumb}" alt="${guide.name}"><div><span class="eyebrow">Выбранный проводник</span><h2>${guide.name}</h2><div class="guide-picker" aria-label="Выбрать проводника">${Object.entries(guides).map(([key, item]) => `<button class="${key === state.guide ? 'selected' : ''}" type="button" data-guide="${key}" aria-label="${item.name}"><img src="${item.thumb}" alt=""></button>`).join('')}</div></div></div>
       <div class="card card-pad section-gap">
-        <div class="data-row"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg><div><strong>Данные рождения</strong><span>${state.birthReady || state.mode === 'returning' ? '12 октября 1990 · 09:40 · Самара' : 'Не добавлены'}</span></div><button type="button" data-route="birth">Изменить</button></div>
+        <div class="data-row"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg><div><strong>Данные рождения</strong><span data-birth-summary>${esc(birthSummary())}</span></div><button type="button" data-route="birth">Изменить</button></div>
         <div class="data-row"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 7l9 7 9-7"/></svg><div><strong>Email</strong><span>tanya@example.ru</span></div><span></span></div>
       </div>
       <div class="hint section-gap"><span>Это тестовое превью. Профиль, email и данные рождения вымышлены и никуда не отправляются.</span></div>
@@ -195,7 +225,7 @@
     document.querySelectorAll('[data-route]').forEach(button => button.addEventListener('click', () => go(button.dataset.route)));
     document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
       state = { ...defaultState, mode: button.dataset.mode, route: 'home', guide: state.guide };
-      if (state.mode === 'returning') { state.birthReady = true; state.reportReady = true; state.birth = { date: '1990-10-12', time: '09:40', city: 'Самара, Россия', unknownTime: false }; }
+      if (state.mode === 'returning') applyReturningDemo();
       save(); render();
     }));
     document.querySelectorAll('[data-guide]').forEach(button => button.addEventListener('click', () => { state.guide = button.dataset.guide; save(); render(); }));
