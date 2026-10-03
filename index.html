@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2a1114">
+  <meta name="robots" content="noindex, nofollow">
+  <title>В МАТРИЦЕ — концепция приложения</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="demo-switch" role="group" aria-label="Демонстрационное состояние">
+      <span>Демо</span>
+      <button type="button" data-mode="new" aria-pressed="true">Новый</button>
+      <button type="button" data-mode="returning" aria-pressed="false">Вернувшийся</button>
+    </div>
+
+    <main id="app" aria-live="polite"></main>
+
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button type="button" data-route="home" aria-label="Главная">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
+        <span>Главная</span>
+      </button>
+      <button type="button" data-route="chart" aria-label="Карта">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>
+        <span>Карта</span>
+      </button>
+      <button type="button" data-route="guide" aria-label="Проводник">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2c2 0 3.2 1.2 4.5 3 1.3-1.8 2.5-3 4.5-3A3.5 3.5 0 0 1 20 5.5c0 6-8 11.5-8 11.5S4 11.5 4 5.5Z"/><path d="M8 21h8M12 17v4"/></svg>
+        <span>Проводник</span>
+      </button>
+      <button type="button" data-route="reports" aria-label="Разборы">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6M9 7h3"/></svg>
+        <span>Разборы</span>
+      </button>
+    </nav>
+  </div>
+
+  <template id="brand-template">
+    <div class="brand-lockup" aria-label="В МАТРИЦЕ">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 35c-1-10 1-18 8-26-1 9-3 14-8 18M20 35c1-10-1-18-8-26 1 9 3 14 8 18M20 30C10 29 5 24 3 16c8 2 13 6 17 14M20 30c10-1 15-6 17-14-8 2-13 6-17 14"/></svg>
+      <div><b>В МАТРИЦЕ</b><span>твой внутренний мир имеет значение</span></div>
+    </div>
+  </template>
+
+  <script src="./app.js"></script>
+</body>
+</html>
